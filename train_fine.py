@@ -47,10 +47,10 @@ INIT_LR = 0.01 * BS_UPSCALE
 X3D_VERSION = 'M'
 CHARADES_MEAN = [0.413, 0.368, 0.338]
 CHARADES_STD = [0.131, 0.125, 0.132] # CALCULATED ON CHARADES TRAINING SET FOR FRAME-WISE MEANS
-CHARADES_TR_SIZE = 7900
-CHARADES_VAL_SIZE = 1850
-CHARADES_ROOT = '/data/add_disk0/kumarak/Charades_v1_rgb'
-CHARADES_ANNO = 'data/charades.json'
+CHARADES_TR_SIZE = 426
+CHARADES_VAL_SIZE = 106
+CHARADES_ROOT = 'mnt/lustre/mbowditch/AnnChor260_segmented_rgb'
+CHARADES_ANNO = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/data/AnnChor260_segmented.json'
 
 
 def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARADES_ROOT,
@@ -101,14 +101,14 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARA
 
     fine_net = x3d_fine.generate_model(x3d_version=X3D_VERSION, n_classes=400, n_input_channels=3,
                                     task='loc', dropout=0.5, base_bn_splits=1, t_downsample=False, extract_feat=False)
-    load_ckpt = torch.load('models/x3d_multigrid_kinetics_fb_pretrained.pt')
+    load_ckpt = torch.load('mnt/lustre/mbowditch/Coarse-Fine-AnnChor/models/x3d_multigrid_kinetics_fb_pretrained.pt')
     state = fine_net.state_dict()
     state.update(load_ckpt['model_state_dict'])
     fine_net.load_state_dict(state)
 
-    save_model = 'models/fine_charades_'
+    save_model = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/models/fine_annchor_'
 
-    fine_net.replace_logits(157)
+    fine_net.replace_logits(11)
 
     '''load_ckpt = torch.load('models/fine_charades_039000_SAVE.pt')
     state = fine_net.state_dict()
@@ -136,12 +136,22 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARA
     criterion_class = nn.BCELoss(reduction='mean')
     criterion_loc = nn.BCELoss(reduction='sum')
 
+    best_fine_tr_map = 0
+    best_fine_val_map = 0
+
     val_apm = APMeter()
     tr_apm = APMeter()
 
+
+    trainfineLog = open("mnt/lustre/mbowditch/Coarse-Fine-AnnChor/finestreamTrainingLog.txt", 'a')
     while epochs < max_epochs:#for epoch in range(num_epochs):
         print ('Step {} Epoch {}'.format(steps, epochs))
+        trainfineLog.write('Step {} Epoch {}'.format(steps, epochs))
         print ('-' * 10)
+        trainfineLog.write('-' * 10)
+        trainfineLog.write('\n')
+        trainfineLog.flush()
+        os.fsync(trainfineLog.fileno())
 
         # Each epoch has a training and validation phase
         for phase in 4*['train']+['val']:
@@ -241,9 +251,24 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARA
                         tr_apm.reset()
                         print (' Epoch:{} {} steps: {} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f} mAP: {:.4f}'.format(epochs, phase,
                             steps, tot_loc_loss/(s_times*num_steps_per_update), tot_cls_loss/(s_times*num_steps_per_update), tot_loss/s_times, tr_map))
+                        trainfineLog.write(' Epoch:{} {} steps: {} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f} mAP: {:.4f}'.format(epochs, phase,
+                            steps, tot_loc_loss/(s_times*num_steps_per_update), tot_cls_loss/(s_times*num_steps_per_update), tot_loss/s_times, tr_map))
+                        trainfineLog.flush()
+                        os.fsync(trainfineLog.fileno())
                         tot_loss = tot_loc_loss = tot_cls_loss = tot_acc = tot_corr = tot_dat = 0.
+                        if tr_apm > best_fine_tr_map:
+                            ckpt = {'epochs':epochs + 1,
+                                    'model_state_dict': fine_net.module.state_dict(),
+                                    'optimizer_state_dict': optimizer.state_dict(),
+                                    'scheduler_state_dict': lr_sched.state_dict()}
+                            torch.save(ckpt,"mnt/lustre/mbowditch/Coarse-Fine-AnnChor/models/fine_model_best_tr_map.pt")
+                            print("New fine_model_best_tr_map model saved.")
+                            best_fine_tr_map = tr_map
+
+
                     if steps % (1000) == 0:
-                        ckpt = {'model_state_dict': fine_net.module.state_dict(),
+                        ckpt = {'epochs': epochs + 1,
+                                'model_state_dict': fine_net.module.state_dict(),
                                 'optimizer_state_dict': optimizer.state_dict(),
                                 'scheduler_state_dict': lr_sched.state_dict()}
                         torch.save(ckpt, save_model+str(steps).zfill(6)+'.pt')
@@ -252,8 +277,20 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARA
                 val_apm.reset()
                 print (' Epoch:{} {} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f} mAP: {:.4f}'.format(epochs, phase,
                     tot_loc_loss/num_iter, tot_cls_loss/num_iter, (tot_loss*num_steps_per_update)/num_iter, val_map))
+                trainfineLog.write(' Epoch:{} {} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f} mAP: {:.4f}'.format(epochs, phase,
+                    tot_loc_loss/num_iter, tot_cls_loss/num_iter, (tot_loss*num_steps_per_update)/num_iter, val_map))
+                trainfineLog.flush()
+                os.fsync(trainfineLog.fileno())
                 tot_loss = tot_loc_loss = tot_cls_loss = tot_acc = tot_corr = tot_dat = 0.
+                if val_map > best_fine_val_map:
+                    ckpt = {'epochs': epochs + 1,
+                            'model_state_dict': fine_net.module.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'scheduler_state_dict': lr_sched.state_dict()}
+                    torch.save(ckpt, "mnt/lustre/mbowditch/Coarse-Fine-AnnChor/models/fine_model_best_val_map.pt")
+                    print("New fine_model_best_val_map model saved.")
                 lr_sched.step()
+    trainfineLog.close()
 
 def lr_warmup(init_lr, cur_steps, warmup_steps, opt):
     start_after = 1

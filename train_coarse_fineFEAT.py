@@ -48,11 +48,11 @@ INIT_LR = 0.02 * BS_UPSCALE #* 0.1
 X3D_VERSION = 'M'
 CHARADES_MEAN = [0.413, 0.368, 0.338]
 CHARADES_STD = [0.131, 0.125, 0.132] # CALCULATED ON CHARADES TRAINING SET FOR FRAME-WISE MEANS
-CHARADES_TR_SIZE = 7900
-CHARADES_VAL_SIZE = 1850
-CHARADES_ROOT = '/data/add_disk0/kumarak/Charades_v1_rgb'
-CHARADES_ANNO = 'data/charades.json'
-FINE_FEAT_DIR = '/nfs/bigcornea/add_disk0/kumarak/fine_spatial7x7' # pre-extract fine features and save here, to reduce compute req
+CHARADES_TR_SIZE = 426
+CHARADES_VAL_SIZE = 106
+CHARADES_ROOT = 'mnt/lustre/mbowditch/AnnChor260_segmented_rgb'
+CHARADES_ANNO = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/data/AnnChor260_segmented.json'
+FINE_FEAT_DIR = 'mnt/lustre/mbowditch/fine_spatial7x7' # pre-extract fine features and save here, to reduce compute req
 
 
 # 0.00125 * BS_UPSCALE --> 80 epochs warmup 2000
@@ -107,15 +107,15 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, root=CHARADES_ROOT, tra
     coarse_net = x3d_coarse.generate_model(x3d_version=X3D_VERSION, n_classes=400, n_input_channels=3,
                                     feat_depth=feat_depth, task='loc', dropout=0.5, base_bn_splits=1,
                                     learnedMixing=True, isMixing=True, t_pool='grid')
-    load_ckpt = torch.load('models/x3d_multigrid_kinetics_fb_pretrained.pt')
+    load_ckpt = torch.load('mnt/lustre/mbowditch/Coarse-Fine-AnnChor/models/x3d_multigrid_kinetics_fb_pretrained.pt')
     #x3d.load_state_dict(load_ckpt['model_state_dict'])
     state = coarse_net.state_dict()
     state.update(load_ckpt['model_state_dict'])
     coarse_net.load_state_dict(state)
 
-    save_model = 'models/coarse_fineFEAT_charades_'
+    save_model = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/models/coarse_fineFEAT_annchor_'
 
-    coarse_net.replace_logits(157)
+    coarse_net.replace_logits(11)
 
     '''load_ckpt = torch.load('models/coarse_fineFEAT_charades_019000_SAVE.pt')
     state = coarse_net.state_dict()
@@ -123,7 +123,7 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, root=CHARADES_ROOT, tra
     coarse_net.load_state_dict(state)'''
 
     if steps>0:
-        load_ckpt = torch.load('models/coarse_fineFEAT_charades_'+str(load_steps).zfill(6)+'.pt')
+        load_ckpt = torch.load('mnt/lustre/mbowditch/Coarse-Fine-AnnChor/models/coarse_fineFEAT_annchor_'+str(load_steps).zfill(6)+'.pt')
         coarse_net.load_state_dict(load_ckpt['model_state_dict'])
 
     coarse_net.cuda()
@@ -148,15 +148,24 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, root=CHARADES_ROOT, tra
 
     criterion_class = nn.BCELoss(reduction='mean')
     criterion_loc = nn.BCELoss(reduction='sum')
+    best_val_map = 0
+    best_tr_map = 0
 
     val_apm = APMeter()
     tr_apm = APMeter()
-    write_file = open('localize_corr_v1.csv', 'w', newline='\n')
+    write_file = open('mnt/lustre/mbowditch/Coarse-Fine-AnnChor/localize_corr_v1.csv', 'w', newline='\n')
     writer = csv.writer(write_file)
 
+    coarsefineTrainLog = open('mnt/lustre/mbowditch/Coarse-Fine-AnnChor/coarseFineTrainingLog.txt', 'a')
     while epochs < max_epochs:
         print ('Step {} Epoch {}'.format(steps, epochs))
+        coarsefineTrainLog.write('Step {} Epoch {} \n'.format(steps, epochs))
         print ('-' * 10)
+        coarsefineTrainLog.write('-' * 10)
+        coarsefineTrainLog.write('\n')
+        coarsefineTrainLog.flush()
+        os.fsync(coarsefineTrainLog.fileno())
+
 
         # Each epoch has a training and validation phase
         for phase in 2*['train']+['val']: #['val']:# for training --> 2*['train']+['val']:
@@ -261,7 +270,7 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, root=CHARADES_ROOT, tra
                                 st+=str(act[j])+' '
                             st=st[:-1]
                             writer.writerow([name[0], 1+i*dur[b].item()/25., st])
-
+                            write_file.flush() #Added to flush to disk immediately
                         val_apm.add(p1.transpose(0,1).detach().cpu().numpy(),
                                     l1.transpose(0,1).cpu().numpy())
 
@@ -285,20 +294,50 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, root=CHARADES_ROOT, tra
                         tr_apm.reset()
                         print (' Epoch:{} {} steps: {} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f} mAP: {:.4f}'.format(epochs, phase,
                             steps, tot_loc_loss/(s_times*num_steps_per_update), tot_cls_loss/(s_times*num_steps_per_update), tot_loss/s_times, tr_map))#, tot_acc/(s_times*num_steps_per_update)))
+                        coarsefineTrainLog.write(' Epoch:{} {} steps: {} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f} mAP: {:.4f} \n'.format(epochs, phase,
+                            steps, tot_loc_loss/(s_times*num_steps_per_update), tot_cls_loss/(s_times*num_steps_per_update), tot_loss/s_times, tr_map))
+                        coarsefineTrainLog.flush()
+                        os.fsync(coarsefineTrainLog.fileno())
                         tot_loss = tot_loc_loss = tot_cls_loss = tot_dis_loss = tot_acc = tot_corr = tot_dat = 0.
+                        if tr_map > best_tr_map:
+                            ckpt = {'epochs': epochs + 1,
+                                    'model_state_dict': coarse_net.module.state_dict(),
+                                    'optimizer_state_dict': optimizer.state_dict(),
+                                    'scheduler_state_dict': lr_sched.state_dict()}
+                            torch.save(ckpt, "models/best_model_tr_map.pt")
+                            print("New best_tr_map - model saved.")
+                            best_tr_map = tr_map
+
                     if steps % (1000) == 0:
-                        ckpt = {'model_state_dict': coarse_net.module.state_dict(),
+                        ckpt = {'epochs': epochs + 1,
+                                'model_state_dict': coarse_net.module.state_dict(),
                                 'optimizer_state_dict': optimizer.state_dict(),
                                 'scheduler_state_dict': lr_sched.state_dict()}
                         torch.save(ckpt, save_model+str(steps).zfill(6)+'.pt')
+
             if phase == 'val':
-                write_file.close()
+                #write_file.close()
                 val_map = val_apm.value().mean()
                 val_apm.reset()
                 print (' Epoch:{} {} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f} mAP: {:.4f}'.format(epochs, phase,
                     tot_loc_loss/num_iter, tot_cls_loss/num_iter, (tot_loss*num_steps_per_update)/num_iter, val_map))#, tot_acc/num_iter))
+                coarsefineTrainLog.write(' Epoch:{} {} Loc Loss: {:.4f} Cls Loss: {:.4f} Tot Loss: {:.4f} mAP: {:.4f} \n'.format(epochs, phase,
+                    tot_loc_loss/num_iter, tot_cls_loss/num_iter, (tot_loss*num_steps_per_update)/num_iter, val_map))
+                coarsefineTrainLog.flush()
+                os.fsync(coarsefineTrainLog.fileno())
                 tot_loss = tot_loc_loss = tot_cls_loss = tot_dis_loss = tot_acc = tot_corr = tot_dat = 0.
+                if val_map > best_val_map:
+                    ckpt = {'epochs': epochs + 1,
+                            'model_state_dict': coarse_net.module.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'scheduler_state_dict': lr_sched.state_dict()}
+                    torch.save(ckpt, "models/best_model_val_map.pt")
+                    print("New best_val_map - model saved.")
+                    best_val_map = val_map
                 lr_sched.step()
+
+    write_file.close()
+    coarsefineTrainLog.close()
 
 
 def lr_warmup(init_lr, cur_steps, warmup_steps, opt):

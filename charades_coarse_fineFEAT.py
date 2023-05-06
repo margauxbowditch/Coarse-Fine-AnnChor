@@ -26,12 +26,13 @@ def pil_loader(path):
 
 
 def accimage_loader(path):
-    try:
-        import accimage
-        return accimage.Image(path)
-    except IOError:
-        # Potentially a decoding problem, fall back to PIL.Image
-        return pil_loader(path)
+    return pil_loader(path)
+    # try:
+    #     import accimage
+    #     return accimage.Image(path)
+    # except IOError:
+    #     # Potentially a decoding problem, fall back to PIL.Image
+    #     return pil_loader(path)
 
 
 def get_default_image_loader():
@@ -46,7 +47,7 @@ def get_default_image_loader():
 def video_loader(video_dir_path, vid, frame_indices, image_loader):
     video = []
     for i in frame_indices:
-        image_path = os.path.join(video_dir_path, vid, vid+'-'+str(i).zfill(6)+'.jpg')
+        image_path = os.path.join(video_dir_path, vid, vid+'_'+str(i)+'.jpg')
         #image_path = os.path.join(video_dir_path, 'frame_{:05d}.jpg'.format(i))
         if os.path.exists(image_path):
             video.append(image_loader(image_path))
@@ -89,7 +90,7 @@ def load_rgb_frames(image_dir, fine_feat, feature_keys, vid, start, num, stride,
   return frames, feat
 
 
-def make_dataset(split_file, split, root, num_classes=157):
+def make_dataset(split_file, split, root, num_classes=11):
     dataset = []
     with open(split_file, 'r') as f:
         data = json.load(f)
