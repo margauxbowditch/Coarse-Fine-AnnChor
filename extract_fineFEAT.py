@@ -47,7 +47,7 @@ CHARADES_TR_SIZE = 426
 CHARADES_VAL_SIZE = 106
 CHARADES_ROOT = 'mnt/lustre/mbowditch/AnnChor260_segmented_rgb'
 CHARADES_ANNO = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/data/AnnChor260_segmented.json'
-FINE_SAVE_DIR = 'mnt/lustre/mbowditch/fine_spatial7x7'
+FINE_SAVE_DIR = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/fine_spatial7x7'
 # pre-extract fine features and save here, to reduce compute req
 # MAKE DIRS FINE_SAVE_DIR/['layer1', 'layer2', 'layer3', 'layer4', 'conv5']
 feat_keys = ['layer1', 'layer2', 'layer3', 'layer4', 'conv5']

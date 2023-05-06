@@ -52,7 +52,7 @@ CHARADES_TR_SIZE = 426
 CHARADES_VAL_SIZE = 106
 CHARADES_ROOT = 'mnt/lustre/mbowditch/AnnChor260_segmented_rgb'
 CHARADES_ANNO = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/data/AnnChor260_segmented.json'
-FINE_FEAT_DIR = 'mnt/lustre/mbowditch/fine_spatial7x7' # pre-extract fine features and save here, to reduce compute req
+FINE_FEAT_DIR = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/fine_spatial7x7' # pre-extract fine features and save here, to reduce compute req
 
 
 # 0.00125 * BS_UPSCALE --> 80 epochs warmup 2000
