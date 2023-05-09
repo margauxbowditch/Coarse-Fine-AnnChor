@@ -50,9 +50,9 @@ CHARADES_MEAN = [0.413, 0.368, 0.338]
 CHARADES_STD = [0.131, 0.125, 0.132] # CALCULATED ON CHARADES TRAINING SET FOR FRAME-WISE MEANS
 CHARADES_TR_SIZE = 426
 CHARADES_VAL_SIZE = 106
-CHARADES_ROOT = 'mnt/lustre/mbowditch/AnnChor260_segmented_rgb'
-CHARADES_ANNO = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/data/AnnChor260_segmented.json'
-FINE_FEAT_DIR = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/fine_spatial7x7' # pre-extract fine features and save here, to reduce compute req
+CHARADES_ROOT = '/mnt/lustre/users/mbowditch/AnnChor260_segmented_rgb'
+CHARADES_ANNO = '/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/data/AnnChor260_segmented.json'
+FINE_FEAT_DIR = '/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/fine_spatial7x7' # pre-extract fine features and save here, to reduce compute req
 
 
 # 0.00125 * BS_UPSCALE --> 80 epochs warmup 2000
@@ -107,13 +107,13 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, root=CHARADES_ROOT, tra
     coarse_net = x3d_coarse.generate_model(x3d_version=X3D_VERSION, n_classes=400, n_input_channels=3,
                                     feat_depth=feat_depth, task='loc', dropout=0.5, base_bn_splits=1,
                                     learnedMixing=True, isMixing=True, t_pool='grid')
-    load_ckpt = torch.load('mnt/lustre/mbowditch/Coarse-Fine-AnnChor/models/x3d_multigrid_kinetics_fb_pretrained.pt')
+    load_ckpt = torch.load('/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/models/x3d_multigrid_kinetics_fb_pretrained.pt')
     #x3d.load_state_dict(load_ckpt['model_state_dict'])
     state = coarse_net.state_dict()
     state.update(load_ckpt['model_state_dict'])
     coarse_net.load_state_dict(state)
 
-    save_model = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/models/coarse_fineFEAT_annchor_'
+    save_model = '/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/models/coarse_fineFEAT_annchor_'
 
     coarse_net.replace_logits(11)
 
@@ -123,7 +123,7 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, root=CHARADES_ROOT, tra
     coarse_net.load_state_dict(state)'''
 
     if steps>0:
-        load_ckpt = torch.load('mnt/lustre/mbowditch/Coarse-Fine-AnnChor/models/coarse_fineFEAT_annchor_'+str(load_steps).zfill(6)+'.pt')
+        load_ckpt = torch.load('/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/models/coarse_fineFEAT_annchor_'+str(load_steps).zfill(6)+'.pt')
         coarse_net.load_state_dict(load_ckpt['model_state_dict'])
 
     coarse_net.cuda()
@@ -153,10 +153,10 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, root=CHARADES_ROOT, tra
 
     val_apm = APMeter()
     tr_apm = APMeter()
-    write_file = open('mnt/lustre/mbowditch/Coarse-Fine-AnnChor/localize_corr_v1.csv', 'w', newline='\n')
+    write_file = open('/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/localize_corr_v1.csv', 'w', newline='\n')
     writer = csv.writer(write_file)
 
-    coarsefineTrainLog = open('mnt/lustre/mbowditch/Coarse-Fine-AnnChor/coarseFineTrainingLog.txt', 'a')
+    coarsefineTrainLog = open('/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/coarseFineTrainingLog.txt', 'a')
     while epochs < max_epochs:
         print ('Step {} Epoch {}'.format(steps, epochs))
         coarsefineTrainLog.write('Step {} Epoch {} \n'.format(steps, epochs))
@@ -304,7 +304,7 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, root=CHARADES_ROOT, tra
                                     'model_state_dict': coarse_net.module.state_dict(),
                                     'optimizer_state_dict': optimizer.state_dict(),
                                     'scheduler_state_dict': lr_sched.state_dict()}
-                            torch.save(ckpt, "models/best_model_tr_map.pt")
+                            torch.save(ckpt, "/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/models/best_model_tr_map.pt")
                             print("New best_tr_map - model saved.")
                             best_tr_map = tr_map
 
@@ -331,7 +331,7 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, root=CHARADES_ROOT, tra
                             'model_state_dict': coarse_net.module.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict(),
                             'scheduler_state_dict': lr_sched.state_dict()}
-                    torch.save(ckpt, "models/best_model_val_map.pt")
+                    torch.save(ckpt, "/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/models/best_model_val_map.pt")
                     print("New best_val_map - model saved.")
                     best_val_map = val_map
                 lr_sched.step()

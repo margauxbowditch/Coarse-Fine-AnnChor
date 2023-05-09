@@ -45,9 +45,9 @@ CHARADES_MEAN = [0.413, 0.368, 0.338]
 CHARADES_STD = [0.131, 0.125, 0.132]
 CHARADES_TR_SIZE = 426
 CHARADES_VAL_SIZE = 106
-CHARADES_ROOT = 'mnt/lustre/mbowditch/AnnChor260_segmented_rgb'
-CHARADES_ANNO = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/data/AnnChor260_segmented.json'
-FINE_SAVE_DIR = 'mnt/lustre/mbowditch/Coarse-Fine-AnnChor/fine_spatial7x7'
+CHARADES_ROOT = '/mnt/lustre/users/mbowditch/AnnChor260_segmented_rgb'
+CHARADES_ANNO = '/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/data/AnnChor260_segmented.json'
+FINE_SAVE_DIR = '/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/fine_spatial7x7'
 # pre-extract fine features and save here, to reduce compute req
 # MAKE DIRS FINE_SAVE_DIR/['layer1', 'layer2', 'layer3', 'layer4', 'conv5']
 feat_keys = ['layer1', 'layer2', 'layer3', 'layer4', 'conv5']
@@ -100,7 +100,7 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=100, root=CHARADES_ROOT,
 
     fine_net.replace_logits(11)
 
-    load_ckpt = torch.load('mnt/lustre/mbowditch/Coarse-Fine-AnnChor/models/fine_annchor_.pt') #to be updated
+    load_ckpt = torch.load('/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/models/fine_annchor_.pt') #to be updated
     state = fine_net.state_dict()
     state.update(load_ckpt['model_state_dict'])
     fine_net.load_state_dict(state)
