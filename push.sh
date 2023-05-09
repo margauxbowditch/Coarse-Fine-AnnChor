@@ -1,4 +1,4 @@
 #!/bin/bash
 
 cat ~/tkn | xclip -sel clip
-git push 
+git push origin main
