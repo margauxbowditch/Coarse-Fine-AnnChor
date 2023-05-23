@@ -49,8 +49,8 @@ CHARADES_MEAN = [0.413, 0.368, 0.338]
 CHARADES_STD = [0.131, 0.125, 0.132] # CALCULATED ON CHARADES TRAINING SET FOR FRAME-WISE MEANS
 CHARADES_TR_SIZE = 426
 CHARADES_VAL_SIZE = 106
-CHARADES_ROOT = '/mnt/lustre/users/mbowditch/AnnChor260_segmented_rgb'
-CHARADES_ANNO = '/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/data/AnnChor260_segmented.json'
+CHARADES_ROOT = '/home/margauxb/AnnChor260_segmented_rgb'
+CHARADES_ANNO = '/home/margauxb/Coarse-Fine-AnnChor/data/AnnChor260_segmented.json'
 
 
 def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARADES_ROOT,
@@ -101,12 +101,12 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARA
 
     fine_net = x3d_fine.generate_model(x3d_version=X3D_VERSION, n_classes=400, n_input_channels=3,
                                     task='loc', dropout=0.5, base_bn_splits=1, t_downsample=False, extract_feat=False)
-    load_ckpt = torch.load('/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/models/x3d_multigrid_kinetics_fb_pretrained.pt')
+    load_ckpt = torch.load('/home/margauxb/Coarse-Fine-AnnChor/models/x3d_multigrid_kinetics_fb_pretrained.pt')
     state = fine_net.state_dict()
     state.update(load_ckpt['model_state_dict'])
     fine_net.load_state_dict(state)
 
-    save_model = '/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/models/fine_annchor_'
+    save_model = '/home/margauxb/Coarse-Fine-AnnChor/models/fine_annchor_'
 
     fine_net.replace_logits(11)
 
@@ -116,7 +116,7 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARA
     fine_net.load_state_dict(state)'''
 
     if steps>0:
-        load_ckpt = torch.load('/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/models/fine_annchor_'+str(load_steps).zfill(6)+'.pt')
+        load_ckpt = torch.load('/home/margauxb/Coarse-Fine-AnnChor/models/fine_annchor_'+str(load_steps).zfill(6)+'.pt')
         fine_net.load_state_dict(load_ckpt['model_state_dict'])
 
     fine_net.cuda()
@@ -143,7 +143,7 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARA
     tr_apm = APMeter()
 
 
-    trainfineLog = open("/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/finestreamTrainingLog.txt", 'a')
+    trainfineLog = open("/home/margauxb/Coarse-Fine-AnnChor/finestreamTrainingLog.txt", 'a')
     while epochs < max_epochs:#for epoch in range(num_epochs):
         print ('Step {} Epoch {}'.format(steps, epochs))
         trainfineLog.write('Step {} Epoch {}'.format(steps, epochs))
@@ -261,7 +261,7 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARA
                                     'model_state_dict': fine_net.module.state_dict(),
                                     'optimizer_state_dict': optimizer.state_dict(),
                                     'scheduler_state_dict': lr_sched.state_dict()}
-                            torch.save(ckpt,"/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/models/fine_model_best_tr_map.pt")
+                            torch.save(ckpt,"/home/margauxb/Coarse-Fine-AnnChor/models/fine_model_best_tr_map.pt")
                             print("New fine_model_best_tr_map model saved.")
                             best_fine_tr_map = tr_map
 
@@ -287,7 +287,7 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARA
                             'model_state_dict': fine_net.module.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict(),
                             'scheduler_state_dict': lr_sched.state_dict()}
-                    torch.save(ckpt, "/mnt/lustre/users/mbowditch/Coarse-Fine-AnnChor/models/fine_model_best_val_map.pt")
+                    torch.save(ckpt, "/home/margauxb/Coarse-Fine-AnnChor/models/fine_model_best_val_map.pt")
                     print("New fine_model_best_val_map model saved.")
                 lr_sched.step()
     trainfineLog.close()
