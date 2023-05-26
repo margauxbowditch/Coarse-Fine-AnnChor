@@ -289,6 +289,7 @@ def run(init_lr=INIT_LR, warmup_steps=0, max_epochs=200, mode='rgb', root= CHARA
                             'scheduler_state_dict': lr_sched.state_dict()}
                     torch.save(ckpt, "/home/margauxb/Coarse-Fine-AnnChor/models/fine_model_best_val_map.pt")
                     print("New fine_model_best_val_map model saved.")
+                    best_fine_val_map = val_map
                 lr_sched.step()
     trainfineLog.close()
 
